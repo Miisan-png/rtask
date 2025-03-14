@@ -150,9 +150,7 @@ You can change this location during configuration.
 
 ## License
 MIT License - see the [LICENSE](LICENSE) file for details.
-## Author
 
-- Miisan - [GitHub Profile](https://github.com/Miisan-png)
 
 ## other stuff
 - Inspired by CLI tools like Git and Todo.txt and warrorir 
