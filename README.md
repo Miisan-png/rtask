@@ -1,9 +1,4 @@
 # RTask - CLI Task Tracker
-
-<p align="center">
-<img src="repo/banner.png" alt="RTask Banner" width="600">
-</p>
-
 A beautiful and simple CLI task tracker written in Rust.
 
 ## Features
