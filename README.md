@@ -1,6 +1,17 @@
 # RTask - CLI Task Tracker
 A beautiful and simple CLI task tracker written in Rust.
 
+## Screenshots
+<p align="center">
+<img src="repo/ss-2.png" alt="RTask Screenshot 2" width="600">
+</p>
+
+<p align="center">
+<img src="repo/ss-1.png" alt="RTask Screenshot 1" width="600">
+</p>
+
+
+
 ## Features
 - Simple and intuitive CLI interface
 - Add, list, complete, and remove tasks
@@ -133,17 +144,6 @@ By default, tasks are stored in your home directory:
 - Windows: `C:\Users\halo\.rtasks\tasks.json`
 
 You can change this location during configuration.
-
-## Screenshots
-
-<p align="center">
-<img src="repo/ss-2.png" alt="RTask Screenshot 2" width="600">
-</p>
-
-<p align="center">
-<img src="repo/ss-1.png" alt="RTask Screenshot 1" width="600">
-</p>
-
 
 
 ## License
