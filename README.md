@@ -14,11 +14,7 @@ A beautiful and simple CLI task tracker written in Rust.
 
 ### Using Cargo
 
-If you have Rust and Cargo installed (i am assuming you do?):
-
-```bash
-cargo install rtask
-```
+(i have yet to publish on crates)
 
 ### From Source
 
