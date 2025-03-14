@@ -15,7 +15,7 @@ A beautiful and simple CLI task tracker written in Rust.
 ### Using Cargo
 
 if you have cargo (which i assume you do lol)
-cargo install —git <[url](https://github.com/Miisan-png/rtask)
+cargo install —git https://github.com/Miisan-png/rtask
 ### From Source
 
 1. Clone the repository:
