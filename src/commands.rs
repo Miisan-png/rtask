@@ -5,7 +5,8 @@ use std::io;
 use std::path::Path;
 use chrono::{Local, NaiveDate};
 
-use crate::model::{Task, load_config, get_tasks_file, save_config};
+use crate::model::{Task, SubTask, load_config, get_tasks_file, save_config};
+
 pub fn load_tasks() -> Vec<Task> {
     let path = get_tasks_file();
     
@@ -26,6 +27,7 @@ pub fn load_tasks() -> Vec<Task> {
         Err(_) => Vec::new(),
     }
 }
+
 pub fn save_tasks(tasks: &[Task]) -> io::Result<()> {
     let path = get_tasks_file();
     
@@ -38,6 +40,7 @@ pub fn save_tasks(tasks: &[Task]) -> io::Result<()> {
     let json = serde_json::to_string_pretty(&tasks)?;
     fs::write(path, json)
 }
+
 pub fn add_task(name: String, priority: String, due: Option<String>, tags: Option<String>) {
     let mut tasks = load_tasks();
     let due_date = if let Some(due_str) = due {
@@ -63,10 +66,12 @@ pub fn add_task(name: String, priority: String, due: Option<String>, tags: Optio
         name,
         priority: priority.to_lowercase(),
         status: "pending".to_string(),
+        progress: 0,
         due_date,
         tags: tags_vec,
         created_at: now.format("%Y-%m-%d %H:%M").to_string(),
         completed_at: None,
+        subtasks: Vec::new(),
     };
     
     tasks.push(task.clone());
@@ -84,6 +89,7 @@ pub fn add_task(name: String, priority: String, due: Option<String>, tags: Optio
         }
     }
 }
+
 pub fn format_priority(priority: &str) -> String {
     match priority.to_lowercase().as_str() {
         "high" => priority.bright_red().to_string(),
@@ -92,6 +98,7 @@ pub fn format_priority(priority: &str) -> String {
         _ => priority.normal().to_string(),
     }
 }
+
 pub fn format_status(status: &str) -> String {
     match status.to_lowercase().as_str() {
         "done" => status.bright_green().to_string(),
@@ -99,6 +106,18 @@ pub fn format_status(status: &str) -> String {
         _ => status.normal().to_string(),
     }
 }
+
+pub fn format_progress_bar(progress: u8) -> String {
+    let progress = progress.min(100);
+    let filled = (progress as f32 / 10.0).ceil() as usize;
+    let empty = 10 - filled;
+    
+    let filled_chars = "█".repeat(filled);
+    let empty_chars = "░".repeat(empty);
+    
+    format!("[{}{}] {}%", filled_chars.green(), empty_chars, progress)
+}
+
 pub fn list_tasks(filter: Option<String>, all: bool, completed: bool) {
     let tasks = load_tasks();
     if tasks.is_empty() {
@@ -144,6 +163,7 @@ pub fn list_tasks(filter: Option<String>, all: bool, completed: bool) {
         let id_str = format!("[{}]", task.id).cyan().bold();
         let priority_str = format!("[{}]", task.priority);
         let status_str = format!("[{}]", task.status);
+        let progress_str = format_progress_bar(task.progress);
         
         let due_str = if let Some(due) = &task.due_date {
             format!("(Due: {})", due).yellow()
@@ -157,13 +177,22 @@ pub fn list_tasks(filter: Option<String>, all: bool, completed: bool) {
             "".normal()
         };
         
-        println!("{} {} {} {} {} {}", 
+        let subtasks_str = if !task.subtasks.is_empty() {
+            let completed = task.subtasks.iter().filter(|s| s.completed).count();
+            format!("[{}/{}]", completed, task.subtasks.len()).bright_magenta()
+        } else {
+            "".normal()
+        };
+        
+        println!("{} {} {} {} {} {} {} {}", 
             id_str,
             priority_str,
             status_str,
+            progress_str,
             task.name.bright_white(),
             due_str,
-            tags_str
+            tags_str,
+            subtasks_str
         );
     }
     println!();
@@ -181,6 +210,7 @@ pub fn list_tasks(filter: Option<String>, all: bool, completed: bool) {
         format!("{} completed", done_count).green()
     );
 }
+
 pub fn complete_task(id: usize) {
     let mut tasks = load_tasks();
     
@@ -193,7 +223,12 @@ pub fn complete_task(id: usize) {
                 return;
             }
             tasks[idx].status = "done".to_string();
+            tasks[idx].progress = 100;
             tasks[idx].completed_at = Some(Local::now().format("%Y-%m-%d %H:%M").to_string());
+            
+            for subtask in &mut tasks[idx].subtasks {
+                subtask.completed = true;
+            }
             
             match save_tasks(&tasks) {
                 Ok(_) => {
@@ -213,6 +248,7 @@ pub fn complete_task(id: usize) {
         }
     }
 }
+
 pub fn remove_task(id: usize) {
     let mut tasks = load_tasks();
     
@@ -252,6 +288,7 @@ pub fn remove_task(id: usize) {
         }
     }
 }
+
 pub fn setup_config() {
     println!("{}", "Let's set up RTask configuration".bright_green().bold());
     
@@ -307,6 +344,7 @@ pub fn setup_config() {
         }
     }
 }
+
 pub fn interactive_mode() {
     loop {
         println!("\n{}", "RTask Interactive Mode".cyan().bold());
@@ -317,6 +355,8 @@ pub fn interactive_mode() {
             "List tasks",
             "Today's tasks",
             "Complete a task",
+            "Update task progress",
+            "Manage subtasks",
             "Remove a task",
             "Show task details",
             "Configure",
@@ -334,15 +374,18 @@ pub fn interactive_mode() {
             Ok(1) => interactive_list_tasks(),
             Ok(2) => show_today_tasks(),
             Ok(3) => interactive_complete_task(),
-            Ok(4) => interactive_remove_task(),
-            Ok(5) => interactive_show_task(),
-            Ok(6) => setup_config(),
-            Ok(7) | _ => break,
+            Ok(4) => interactive_update_progress(),
+            Ok(5) => crate::subtasks::interactive_manage_subtasks(),
+            Ok(6) => interactive_remove_task(),
+            Ok(7) => interactive_show_task(),
+            Ok(8) => setup_config(),
+            Ok(9) | _ => break,
         }
     }
     
     println!("{}", "bye byee!".bright_blue());
 }
+
 pub fn interactive_add_task() {
     let name: String = Input::new()
         .with_prompt("Task name")
@@ -398,7 +441,21 @@ pub fn interactive_add_task() {
     };
     
     add_task(name, priority, due_date, tags);
+    
+    let add_subtasks = Confirm::new()
+        .with_prompt("Add subtasks now?")
+        .default(false)
+        .interact()
+        .unwrap();
+    
+    if add_subtasks {
+        let tasks = load_tasks();
+        if let Some(task) = tasks.last() {
+            crate::subtasks::interactive_add_subtasks(task.id);
+        }
+    }
 }
+
 pub fn interactive_list_tasks() {
     let options = vec!["All tasks", "Pending tasks", "Completed tasks"];
     let selection = Select::new()
@@ -431,6 +488,7 @@ pub fn interactive_list_tasks() {
         _ => {}
     }
 }
+
 pub fn interactive_complete_task() {
     let tasks = load_tasks();
     let pending_tasks: Vec<&Task> = tasks.iter().filter(|t| t.status == "pending").collect();
@@ -458,6 +516,7 @@ pub fn interactive_complete_task() {
         Err(_) => {}
     }
 }
+
 pub fn interactive_remove_task() {
     let tasks = load_tasks();
     
@@ -484,6 +543,7 @@ pub fn interactive_remove_task() {
         Err(_) => {}
     }
 }
+
 pub fn show_task_details(id: usize) {
     let tasks = load_tasks();
     let task = tasks.iter().find(|t| t.id == id);
@@ -496,6 +556,7 @@ pub fn show_task_details(id: usize) {
             println!("{}: {}", "Name".yellow(), task.name);
             println!("{}: {}", "Priority".yellow(), format_priority(&task.priority));
             println!("{}: {}", "Status".yellow(), format_status(&task.status));
+            println!("{}: {}", "Progress".yellow(), format_progress_bar(task.progress));
             
             if let Some(due) = &task.due_date {
                 println!("{}: {}", "Due Date".yellow(), due);
@@ -510,12 +571,25 @@ pub fn show_task_details(id: usize) {
             if let Some(completed) = &task.completed_at {
                 println!("{}: {}", "Completed".yellow(), completed);
             }
+            
+            if !task.subtasks.is_empty() {
+                println!("\n{}", "Subtasks:".cyan().bold());
+                for (i, subtask) in task.subtasks.iter().enumerate() {
+                    let status = if subtask.completed {
+                        "[✓]".green()
+                    } else {
+                        "[ ]".yellow()
+                    };
+                    println!("{} {}: {}", status, (i + 1).to_string().cyan(), subtask.name);
+                }
+            }
         },
         None => {
             println!("{}", format!("Task with ID {} not found", id).red());
         }
     }
 }
+
 pub fn interactive_show_task() {
     let tasks = load_tasks();
     
@@ -542,6 +616,7 @@ pub fn interactive_show_task() {
         Err(_) => {}
     }
 }
+
 pub fn show_today_tasks() {
     let tasks = load_tasks();
     let today = Local::now().format("%Y-%m-%d").to_string();
@@ -574,6 +649,7 @@ pub fn show_today_tasks() {
         let id_str = format!("[{}]", task.id).cyan().bold();
         let priority_str = format!("[{}]", task.priority);
         let status_str = format!("[{}]", task.status);
+        let progress_str = format_progress_bar(task.progress);
         
         let due_str = if let Some(due) = &task.due_date {
             format!("(Due: {})", due).yellow()
@@ -587,17 +663,107 @@ pub fn show_today_tasks() {
             "".normal()
         };
         
-        println!("{} {} {} {} {} {}", 
+        let subtasks_str = if !task.subtasks.is_empty() {
+            let completed = task.subtasks.iter().filter(|s| s.completed).count();
+            format!("[{}/{}]", completed, task.subtasks.len()).bright_magenta()
+        } else {
+            "".normal()
+        };
+        
+        println!("{} {} {} {} {} {} {} {}", 
             id_str,
             priority_str,
             status_str,
+            progress_str,
             task.name.bright_white(),
             due_str,
-            tags_str
+            tags_str,
+            subtasks_str
         );
     }
     println!();
 }
+
+pub fn update_task_progress(id: usize, progress: u8) {
+    let mut tasks = load_tasks();
+    
+    let task_idx = tasks.iter().position(|t| t.id == id);
+    
+    match task_idx {
+        Some(idx) => {
+            if tasks[idx].status == "done" {
+                println!("{}", "Cannot update progress of completed task".yellow());
+                return;
+            }
+            
+            let progress = progress.min(100);
+            tasks[idx].progress = progress;
+            
+            if progress == 100 {
+                tasks[idx].status = "done".to_string();
+                tasks[idx].completed_at = Some(Local::now().format("%Y-%m-%d %H:%M").to_string());
+                
+                for subtask in &mut tasks[idx].subtasks {
+                    subtask.completed = true;
+                }
+            }
+            
+            match save_tasks(&tasks) {
+                Ok(_) => {
+                    println!(
+                        "{} {} {}",
+                        "✓ Updated progress for task:".green().bold(),
+                        tasks[idx].name.bright_white(),
+                        format!("({}%)", progress).cyan()
+                    );
+                }
+                Err(e) => {
+                    println!("{} {}", "Error updating task progress:".red().bold(), e);
+                }
+            }
+        }
+        None => {
+            println!("{}", format!("Task with ID {} not found", id).red());
+        }
+    }
+}
+
+pub fn interactive_update_progress() {
+    let tasks = load_tasks();
+    let pending_tasks: Vec<&Task> = tasks.iter().filter(|t| t.status == "pending").collect();
+    
+    if pending_tasks.is_empty() {
+        println!("{}", "No pending tasks to update".yellow());
+        return;
+    }
+    
+    let task_names: Vec<String> = pending_tasks
+        .iter()
+        .map(|t| format!("[{}] {} ({}%)", t.id, t.name, t.progress))
+        .collect();
+    
+    let selection = Select::new()
+        .with_prompt("Select task to update progress")
+        .items(&task_names)
+        .interact();
+    
+    match selection {
+        Ok(idx) => {
+            let task_id = pending_tasks[idx].id;
+            let current_progress = pending_tasks[idx].progress;
+            
+            let progress: u8 = Input::new()
+                .with_prompt("Enter progress percentage (0-100)")
+                .with_initial_text(&current_progress.to_string())
+                .interact_text()
+                .unwrap_or(current_progress);
+            
+            update_task_progress(task_id, progress);
+        }
+        Err(_) => {}
+    }
+}
+
 pub fn print_welcome_banner() {
     println!("{}", r#"
  _____  _____         _     

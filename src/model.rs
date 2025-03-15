@@ -2,6 +2,13 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tabled::Tabled;
 use dirs;
+
+#[derive(Debug, Serialize, Deserialize, Clone, Tabled)]
+pub struct SubTask {
+    pub name: String,
+    pub completed: bool,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Tabled)]
 pub struct Task {
     #[tabled(rename = "ID")]
@@ -16,6 +23,9 @@ pub struct Task {
     #[tabled(rename = "Status")]
     pub status: String,
     
+    #[tabled(rename = "Progress")]
+    pub progress: u8,
+    
     #[tabled(rename = "Due Date")]
     #[tabled(display_with = "display_option_string")]
     pub due_date: Option<String>,
@@ -28,13 +38,18 @@ pub struct Task {
     
     #[tabled(skip)]
     pub completed_at: Option<String>,
+    
+    #[tabled(skip)]
+    pub subtasks: Vec<SubTask>,
 }
+
 fn display_option_string(opt: &Option<String>) -> String {
     match opt {
         Some(s) => s.clone(),
         None => "-".to_string(),
     }
 }
+
 fn display_vec_string(vec: &Vec<String>) -> String {
     if vec.is_empty() {
         "-".to_string()
@@ -42,6 +57,7 @@ fn display_vec_string(vec: &Vec<String>) -> String {
         vec.join(", ")
     }
 }
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
     pub tasks_dir: String,
@@ -58,6 +74,7 @@ impl Default for AppConfig {
         }
     }
 }
+
 pub fn get_default_tasks_dir() -> String {
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
@@ -65,17 +82,21 @@ pub fn get_default_tasks_dir() -> String {
         .to_string_lossy()
         .to_string()
 }
+
 pub fn load_config() -> AppConfig {
     confy::load("rtask", "config").unwrap_or_default()
 }
+
 pub fn save_config(config: &AppConfig) -> Result<(), confy::ConfyError> {
     confy::store("rtask", "config", config)
 }
+
 pub fn is_config_exists() -> bool {
     confy::get_configuration_file_path("rtask", "config")
         .map(|path| path.exists())
         .unwrap_or(false)
 }
+
 pub fn get_tasks_file() -> PathBuf {
     let config = load_config();
     let path = Path::new(&config.tasks_dir).join("tasks.json");
