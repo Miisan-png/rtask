@@ -1,6 +1,17 @@
 # RTask - CLI Task Tracker
 A beautiful and simple CLI task tracker written in Rust.
 
+## Screenshots
+<p align="center">
+<img src="repo/ss-2.png" alt="RTask Screenshot 2" width="600">
+</p>
+
+<p align="center">
+<img src="repo/ss-1.png" alt="RTask Screenshot 1" width="600">
+</p>
+
+
+
 ## Features
 - Simple and intuitive CLI interface
 - Add, list, complete, and remove tasks
@@ -13,13 +24,7 @@ A beautiful and simple CLI task tracker written in Rust.
 ## seting it upp
 
 ### Using Cargo
-
-If you have Rust and Cargo installed (i am assuming you do?):
-
-```bash
-cargo install rtask
-```
-
+```cargo install —git https://github.com/Miisan-png/rtask```
 ### From Source
 
 1. Clone the repository:
@@ -140,23 +145,10 @@ By default, tasks are stored in your home directory:
 
 You can change this location during configuration.
 
-## Screenshots
-
-<p align="center">
-<img src="repo/ss-2.png" alt="RTask Screenshot 2" width="600">
-</p>
-
-<p align="center">
-<img src="repo/ss-1.png" alt="RTask Screenshot 1" width="600">
-</p>
-
-
 
 ## License
 MIT License - see the [LICENSE](LICENSE) file for details.
-## Author
 
-- Miisan - [GitHub Profile](https://github.com/Miisan-png)
 
 ## other stuff
 - Inspired by CLI tools like Git and Todo.txt and warrorir 
