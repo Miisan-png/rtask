@@ -766,12 +766,12 @@ pub fn interactive_update_progress() {
 
 pub fn print_welcome_banner() {
     println!("{}", r#"
- _____  _____         _     
-|  __ \|_   _|       | |    
-| |__) | | | __ _ ___| | __ 
-|  _  /  | |/ _` / __| |/ / 
-| | \ \ _| | (_| \__ \   <  
-|_|  \_\_____\__,_|___/_|\_\ 
+    _____ _______        _    
+    |  __ \__   __|      | |   
+    | |__) | | | __ _ ___| | __
+    |  _  /  | |/ _` / __| |/ /
+    | | \ \  | | (_| \__ \   < 
+    |_|  \_\ |_|\__,_|___/_|\_\   
                             
 "#.bright_cyan());
     println!("{}", "a task tracker in rust because why not?".bright_blue());
